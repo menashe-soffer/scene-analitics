@@ -4,6 +4,13 @@ results/*
 models/*
 videos/*
 
+
+!data/.gitkeep
+!results/.gitkeep
+!models/.gitkeep
+!videos/.gitkeep
+
+
 # You can also add specific file types or log files you want to ignore
 # For example:
 *.log
