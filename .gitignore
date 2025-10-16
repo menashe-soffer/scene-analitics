@@ -1,0 +1,10 @@
+# Directories to ignore
+data/
+results/
+models/
+videos/
+
+# You can also add specific file types or log files you want to ignore
+# For example:
+*.log
+*.DS_Store
