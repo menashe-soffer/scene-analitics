@@ -13,8 +13,8 @@ video_list = ['1.mp4', '2.mp4', '3.mp4', '4.mp4']
 
 # 1. Load a pre-trained detection model (e.g., YOLOv8 medium)
 # The .pt file will be downloaded automatically
-#model = YOLO("yolov8m.pt")
-model = YOLO("yolo11n-seg.pt")
+model = YOLO("yolov8m-seg.pt")
+#model = YOLO("yolov9c-seg.pt")
 tracker_cfg_path = os.path.join(MODEL_FOLDER, 'botsort_reid.yaml')
 
 reid_feature_extractor = reid_features()
@@ -42,8 +42,8 @@ for video_name in video_list:
         results = model.track(frame,
                               persist=True,
                               show=False,
-                              conf=0.5,# default is 0.25
-                              iou=0.4, # default is 0.7
+                              conf=0.4,# default is 0.25
+                              iou=0.55, # default is 0.7
                               classes=0,
                               verbose=False,
                               tracker=tracker_cfg_path) # You can also try "bytetrack.yaml"
