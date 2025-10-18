@@ -7,8 +7,9 @@ videos/*
 
 !data/.gitkeep
 !results/.gitkeep
-!models/.gitkeep
 !videos/.gitkeep
+!models/botsort.yaml
+!models/botsort_reid.yaml
 
 
 # You can also add specific file types or log files you want to ignore
