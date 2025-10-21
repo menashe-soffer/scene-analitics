@@ -14,6 +14,13 @@ videos/*
 # Ignore the README so it can be managed only on GitHub's web interface
 README.md
 
+# type not to manage
+*.pt
+*.md
+*.txt
+*.pdf
+*.mp4
+
 # You can also add specific file types or log files you want to ignore
 # For example:
 *.log
