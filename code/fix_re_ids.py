@@ -2,10 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 import sklearn
+import scipy
 import copy
 import seaborn as sns
 
 from paths import *
+from dist_stat import permutation_test_for_distributions
 
 
 def check_similarity(id_1, id_2, id_vec, pairwise_dist):
@@ -171,6 +173,8 @@ if __name__ == '__main__':
     # pca = sklearn.decomposition.PCA(n_components=100)
     # feat_vec = pca.fit_transform(feat_vec)
     # #
+    # for i in range(feat_vec.shape[0]):
+    #     feat_vec[i] /= np.linalg.norm(feat_vec[i])
     # pairwize distances
     A_sqr = (feat_vec ** 2).sum(axis=1)
     pairwise_dist = A_sqr[:, np.newaxis] - 2 * feat_vec @ feat_vec.T + A_sqr[np.newaxis, :]
@@ -178,7 +182,11 @@ if __name__ == '__main__':
     ax.imshow(pairwise_dist)
     plt.show()
 
-    cross_dist_mat, rel_dist_mat, mod_dist_mat = np.zeros((num_ids, num_ids)), np.zeros((num_ids, num_ids)), np.zeros((num_ids, num_ids))
+    # pairwise weigths
+    mask_wgt_vec = np.sqrt(mask_wgt_vec)
+    pairwise_mask_weights = mask_wgt_vec[:, np.newaxis] @ mask_wgt_vec[np.newaxis, :]
+
+    cross_dist_mat, rel_dist_mat = np.zeros((num_ids, num_ids)), np.zeros((num_ids, num_ids))
     for i_clip in range(1, 4):
         # look for similarities between persons in clip1 and all other clips
         for id1 in range(first_id[i_clip], last_id[i_clip] + 1):
@@ -189,22 +197,88 @@ if __name__ == '__main__':
                     #print('calculating distance id({}) and id({})'.format(id1, id2))
                     frame_idxs_1 = frame_idxs_1[np.argsort(mask_wgt_vec[frame_idxs_1])[-1000:]]
                     frame_idxs_2 = frame_idxs_2[np.argsort(mask_wgt_vec[frame_idxs_2])[-1000:]]
-                    cross_dist = pairwise_dist[frame_idxs_1][:, frame_idxs_2].mean()
-                    relative_cross_dist = cross_dist / np.sqrt(pairwise_dist[frame_idxs_1][:, frame_idxs_1].mean() * pairwise_dist[frame_idxs_2][:, frame_idxs_2].mean())
-                    modified_dist = ((feat_vec[frame_idxs_1].mean(axis=0) - feat_vec[frame_idxs_2].mean(axis=0)) ** 2).sum()
+                    USE_WGT = False
+                    if not USE_WGT:
+                        cross_dist = pairwise_dist[frame_idxs_1][:, frame_idxs_2].mean()
+                        relative_cross_dist = cross_dist / np.sqrt(pairwise_dist[frame_idxs_1][:, frame_idxs_1].mean() * pairwise_dist[frame_idxs_2][:, frame_idxs_2].mean())
+                    else:
+                        cross_distances = pairwise_dist[frame_idxs_1][:, frame_idxs_2]
+                        cross_weights = pairwise_mask_weights[frame_idxs_1][:, frame_idxs_2]
+                        cross_dist = (cross_distances * cross_weights).sum() / cross_weights.sum()
+                        dist1 = ((pairwise_dist[frame_idxs_1][:, frame_idxs_1] * pairwise_mask_weights[frame_idxs_1][:, frame_idxs_1]).sum() / \
+                                 pairwise_mask_weights[frame_idxs_1][:, frame_idxs_1].sum())
+                        dist2 = (pairwise_dist[frame_idxs_2][:, frame_idxs_2] * pairwise_mask_weights[frame_idxs_2][:, frame_idxs_2]).sum() / \
+                                pairwise_mask_weights[frame_idxs_2][:, frame_idxs_2].sum()
+                        relative_cross_dist = cross_dist / np.sqrt(dist1 * dist2)
                     #print('\tdist={:5.3f}  relative={:5.3f}'.format(cross_dist, relative_cross_dist))
                     cross_dist_mat[id1, id2] = cross_dist
                     rel_dist_mat[id1, id2] = relative_cross_dist
-                    mod_dist_mat[id1, id2] = modified_dist
+
+
+    # # estimate feature gaussians
+    # # pca = sklearn.decomposition.PCA(n_components=100)
+    # # feat_vec = pca.fit_transform(feat_vec)
+    # L = feat_vec.shape[-1]
+    # feat_mean = np.zeros((num_ids, L))
+    # feat_cov = np.zeros((num_ids, L, L))
+    # for id in range(num_ids):
+    #     frame_idxs = np.argwhere(id == id_vec)
+    #     if frame_idxs.size > 0:
+    #         frame_idxs = frame_idxs.flatten().astype(int)
+    #         USE_WGT = False
+    #         if USE_WGT:
+    #             feat_mean[id] = (np.diag(mask_wgt_vec[frame_idxs]) @ feat_vec[frame_idxs]).sum(axis=0) / mask_wgt_vec[frame_idxs].sum()
+    #             feat_cov[id] = (feat_vec[frame_idxs] - feat_mean[id]).T @ (np.diag(mask_wgt_vec[frame_idxs]) @ (feat_vec[frame_idxs] - feat_mean[id])) / mask_wgt_vec[frame_idxs].sum()
+    #         else:
+    #             feat_mean[id] = feat_vec[frame_idxs].mean(axis=0)
+    #             feat_cov[id] = (feat_vec[frame_idxs] - feat_mean[id]).T @ (feat_vec[frame_idxs] - feat_mean[id])
+    # # gaussian_besed pairwise_distances
+    # bat_distances = np.zeros((num_ids, num_ids))
+    # Hellinger_dist = np.zeros((num_ids, num_ids))
+    # wesser_distances = np.zeros((num_ids, num_ids))
+    # for i_clip in range(1, 4):
+    #     # look for similarities between persons in clip1 and all other clips
+    #     for id1 in range(first_id[i_clip], last_id[i_clip] + 1):
+    #         for id2 in range(last_id[i_clip] + 2, len(all_person_detections)):
+    #             if min((id1 == id_vec).sum(), (id2 == id_vec).sum()) > 0:
+    #                 avg_cov = (feat_cov[id1] + feat_cov[id2]) / 2
+    #                 u, d, vt = np.linalg.svd(avg_cov + 2e-6 * np.eye(L))
+    #                 use = np.argwhere(np.cumsum(d) / d.sum() > 0.95)[0][0]
+    #                 avg_cov = u[:, :use] @ np.diag(d[:use]) @ vt[:use]
+    #                 avg_cov_det = np.prod(d[:use])
+    #                 avg_cov_inv = u[:, :use] @ np.diag(1 / d[:use]) @ vt[:use]
+    #                 u, d, vt = np.linalg.svd(feat_cov[id1] + 1e-6 * np.eye(L))
+    #                 use = np.argwhere(np.cumsum(d) / d.sum() > 0.95)[0][0]
+    #                 cov1_det = np.prod(d[:use])
+    #                 u, d, vt = np.linalg.svd(feat_cov[id2] + 1e-6 * np.eye(L))
+    #                 use = np.argwhere(np.cumsum(d) / d.sum() > 0.95)[0][0]
+    #                 cov2_det = np.prod(d[:use])
+    #                 #avg_cov_sqrt = u[:, :use] @ np.diag(np.sqrt(d[:use])) @ vt[:use]
+    #                 avg_cov_inv = u[:, :use] @ np.diag(1 / d[:use]) @ vt[:use]
+    #                 #print(id1, id2)
+    #                 bat_distances[id1, id2] = (1 / 8) * (feat_mean[id1] - feat_mean[id2]) @ avg_cov_inv @ (feat_mean[id1] - feat_mean[id2]).T #+ \
+    #                                           #(1 /2) * np.log(avg_cov_det / np.sqrt(cov1_det * cov2_det + 1e-6) + 1e-6)
+    #                 # Hellinger_dist[id1, id2] = np.sqrt(1 - np.exp(-bat_distances[id1, id2]))
+    #                 # u, d, vt = np.linalg.svd(feat_cov[id1])
+    #                 # use = np.argwhere(np.cumsum(d) / d.sum() > 0.95)[0][0]
+    #                 # cov1_sqrt = u[:, :use] @ np.diag(np.sqrt(d[:use])) @ vt[:use]
+    #                 # cross_cov_term = cov1_sqrt @ feat_cov[id2] @ cov1_sqrt
+    #                 # u, d, vt = np.linalg.svd(cross_cov_term)
+    #                 # use = np.argwhere(np.cumsum(d) / d.sum() > 0.95)[0][0]
+    #                 # cross_cov_term = u[:, :use] @ np.diag(np.sqrt(d[:use])) @ vt[:use]
+    #                 # wesser_distances[id1, id2] = (feat_mean[id1] - feat_mean[id2]) @ (feat_mean[id1] - feat_mean[id2]).T + \
+    #                 #     np.trace(feat_cov[id1] + feat_cov[id2] - 2 * cross_cov_term)
 
     fig, ax = plt.subplots(1, 1)
     sns.heatmap(np.round(cross_dist_mat, decimals=2), ax=ax, annot=True)#, xticklabels=id_list, yticklabels=id_list))
     fig, ax = plt.subplots(1, 1)
     sns.heatmap(np.round(rel_dist_mat, decimals=2), ax=ax, annot=True)#, xticklabels=id_list, yticklabels=id_list))
-    fig, ax = plt.subplots(1, 1)
-    sns.heatmap(np.round(mod_dist_mat, decimals=2), ax=ax, annot=True)#, xticklabels=id_list, yticklabels=id_list))
-    fig, ax = plt.subplots(1, 1)
-    sns.heatmap((cross_dist_mat > 0) * (rel_dist_mat < 1.5), ax=ax, annot=True)#, xticklabels=id_list, yticklabels=id_list))
+    # fig, ax = plt.subplots(1, 1)
+    # sns.heatmap(np.round(10 * bat_distances, decimals=2), ax=ax, annot=True)#, xticklabels=id_list, yticklabels=id_list))
+    # fig, ax = plt.subplots(1, 1)
+    # sns.heatmap(np.round(Hellinger_dist, decimals=2), ax=ax, annot=True)#, xticklabels=id_list, yticklabels=id_list))
+    # fig, ax = plt.subplots(1, 1)
+    # sns.heatmap(np.round(np.maximum(np.log(wesser_distances + 1), 0), decimals=2), ax=ax, annot=True)#, xticklabels=id_list, yticklabels=id_list))
     plt.show()
 
     # decide on re-ID's
