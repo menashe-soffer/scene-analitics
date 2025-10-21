@@ -30,10 +30,11 @@ def detect_crime_in_video(model, path_to_video, tracker_cfg_path, show=False):
         for cls in results[i_frame].boxes.cls:
             pistols[i_frame] = True if cls==0 else pistols[i_frame]
             knifes[i_frame] = True if cls == 1 else knifes[i_frame]
-    fig, ax = plt.subplots(2, 1)
-    ax[0].plot(pistols)
-    ax[1].set_ylabel('knifes')
-    ax[1].plot(knifes)
+    if show:
+        fig, ax = plt.subplots(2, 1)
+        ax[0].plot(pistols)
+        ax[1].set_ylabel('knifes')
+        ax[1].plot(knifes)
     # filling in 1 or two frame gap
     pistols = np.convolve(pistols, [1, 1, 1, 1], mode='same') >= 2
     pistols[np.convolve(pistols, [1, 1, 1, 1], mode='same') < 2] = False

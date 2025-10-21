@@ -1,3 +1,5 @@
+import os.path
+
 import numpy as np
 import pickle
 
@@ -8,7 +10,9 @@ from fix_re_ids import reid_all_clips
 from gen_video import my_generate_video_wrapper
 
 
-def make_final_report(WD_counts, strings):
+def make_final_report(WD_counts, strings, output_text_file_path):
+
+    fd_txt = open(output_text_file_path, 'w')
 
     # read all fixed person detections
     id_dict = dict()
@@ -20,8 +24,8 @@ def make_final_report(WD_counts, strings):
                     id_dict[id] = np.zeros(5)
                 id_dict[id][i_clip] = np.sum([len(frm_dtct) > 0 for frm_dtct in dtcts])
 
-    print('\n\nsummary of person detections\n')
-    print('ID\t\t clip-1  clip-2   clip-3   clip-4\n')
+    print('\n\nsummary of person detections\n', file=fd_txt)
+    print('ID\t\t clip-1  clip-2   clip-3   clip-4\n', file=fd_txt)
     for id in id_dict:
         if np.any(id_dict[id] > 0):
             prnstr = str(id) + '  :\t'
@@ -30,14 +34,15 @@ def make_final_report(WD_counts, strings):
                     prnstr += '{:4d}     '.format(int(id_dict[id][i_clip]))
                 else:
                     prnstr += '         '
-            print(prnstr)
+            print(prnstr, file=fd_txt)
 
-    print('\n\nsummary of crime scene detection\n')
+    print('\n\nsummary of crime scene detection\n', file=fd_txt)
     for prn_str in strings:
-        print(prn_str)
+        print(prn_str, file=fd_txt)
 
-    print('\n\n')
+    print('\n\n', file=fd_txt)
 
+    fd.close()
 
 
 
@@ -55,13 +60,16 @@ reid_all_clips(show=False, verbose=False)
 for i in range(1, 5):
     input_video_path = os.path.join(VIDEO_FOLDER, str(i) + '.mp4')
     data_path = os.path.join(DATA_FOLDER, str(i))
-    output_video_path = data_path + '.mp4'
+    output_video_path = os.path.join(DATA_FOLDER, str(i) + '.mp4')
+    final_output_video_path = os.path.join(RESULT_FOLDER, str(i) + '_final.mp4')
     my_generate_video_wrapper(input_video_path=input_video_path, data_path=data_path,
                               output_video_path=output_video_path)
     my_generate_video_wrapper(input_video_path=input_video_path, data_path=data_path + '_final',
-                              output_video_path=output_video_path.replace('.mp4', '_final.mp4'))
+                              output_video_path=final_output_video_path)
 
 
 
 # now make the final report
-make_final_report(WD_counts, strings)
+output_text_file_path = os.path.join(RESULT_FOLDER, 'summary.txt')
+make_final_report(WD_counts, strings, output_text_file_path)
+print('summary written to ', output_text_file_path)
