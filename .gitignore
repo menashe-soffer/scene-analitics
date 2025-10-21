@@ -11,6 +11,8 @@ videos/*
 !models/botsort.yaml
 !models/botsort_reid.yaml
 
+# Ignore the README so it can be managed only on GitHub's web interface
+README.md
 
 # You can also add specific file types or log files you want to ignore
 # For example:
