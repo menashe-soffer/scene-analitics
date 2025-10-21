@@ -91,46 +91,6 @@ def generate_video_with_ids(images, detections_list, output_filename="output_vid
     print(f"\nSuccessfully created video: {output_filename}")
 
 
-# # ==============================================================================
-# # Example Usage (Simulate your data)
-# # ==============================================================================
-#
-#
-# # 1. Simulate Image Data (e.g., 5 frames, 640x480 resolution)
-# num_frames = 50
-# W, H = 640, 480
-# dummy_images = [np.random.randint(0, 256, size=(H, W, 3), dtype=np.uint8) for _ in range(num_frames)]
-#
-# # 2. Simulate Detection Data
-# # Format: list_of_frames [ list_of_detections [ (id, [x1, y1, x2, y2]) ] ]
-# dummy_detections = []
-# for i in range(num_frames):
-#     # Simulate two objects being tracked across frames
-#     if i < 25:
-#         # ID 1 moves left, ID 5 is stable
-#         frame_dets = [
-#             (1, [100 + i * 5, 100, 200 + i * 5, 200]),
-#             (5, [400, 300, 500, 400])
-#         ]
-#     else:
-#         # ID 1 disappears, ID 5 is stable, ID 10 appears
-#         frame_dets = [
-#             (5, [400, 300, 500, 400]),
-#             (10, [50 + (i - 25) * 2, 50, 150 + (i - 25) * 2, 150])
-#         ]
-#     dummy_detections.append(frame_dets)
-#
-# # Call the function
-# generate_video_with_ids(
-#     images=dummy_images,
-#     detections_list=dummy_detections,
-#     output_filename="my_tracking_output.mp4",
-#     fps=15
-# )
-
-
-# now my code
-video_number = 3
 def my_generate_video_wrapper(input_video_path, data_path, output_video_path):
 
     #path_to_video = os.path.join(VIDEO_FOLDER, str(video_number)+'.mp4')
@@ -180,7 +140,7 @@ if __name__ == '__main__':
         data_path = os.path.join(DATA_FOLDER, str(i))
         output_video_path = data_path + '.mp4'
         my_generate_video_wrapper(input_video_path=input_video_path, data_path=data_path, output_video_path=output_video_path)
-        my_generate_video_wrapper(input_video_path=input_video_path, data_path=data_path + '_', output_video_path=output_video_path.replace('.mp4', '_.mp4'))
+        my_generate_video_wrapper(input_video_path=input_video_path, data_path=data_path + '_final', output_video_path=output_video_path.replace('.mp4', '_final.mp4'))
 
 
 

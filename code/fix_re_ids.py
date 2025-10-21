@@ -49,30 +49,10 @@ def parse_person_detection(person_detection):
 
 
 
-def fix_detctions(input_fname, output_fname, show=True):
+def fix_detctions_inside_a_clip(input_fname, output_fname=None, show=True, verbose=True):
 
     with open(input_fname, 'rb') as fd:
         person_detection = pickle.load(fd)['person_detection']
-    # num_ids = len(person_detection)
-    # num_frames = (max([len(p) for p in person_detection]))
-    #
-    # #raw_ids = np.zeros((num_frames, num_ids), dtype=int)
-    # dtct_conf = np.zeros((num_frames, num_ids))
-    # mask_wgt = np.zeros((num_frames, num_ids))
-    # id_list, feat_list, t_list, bbox_list = [], [], [], []
-    #
-    # dtct_array = np.zeros((num_frames, num_ids), dtype=bool)
-    # for id in range(1, num_ids):
-    #     for i_frame in range(len(person_detection[id])):
-    #         if len(person_detection[id][i_frame]) > 0:
-    #             dtct_array[i_frame, id] = True
-    #             dtct_conf[i_frame, id] = person_detection[id][i_frame]['conf']
-    #             mask_wgt[i_frame, id] = person_detection[id][i_frame]['mask'].sum()
-    #             id_list.append(id)
-    #             feat_list.append(person_detection[id][i_frame]['feat'])
-    #             t_list.append(i_frame)
-    #             bbox_list.append(person_detection[id][i_frame]['bbox'])
-    # id_vec, feat_vec, t_vec, bbox_vec = np.array(id_list), np.array(feat_list), np.array(t_list), np.array(bbox_list).squeeze()
 
     num_ids, num_frames, dtct_array, _, _, id_vec, feat_vec, _, _ = parse_person_detection(person_detection)
 
@@ -85,7 +65,8 @@ def fix_detctions(input_fname, output_fname, show=True):
     for id in range(num_ids):
         frm_cnt = dtct_array[:, id].sum()
         if frm_cnt > 0:
-            print('ID {}\t:\t {} frames'.format(id, frm_cnt))
+            if verbose:
+                print('ID {}\t:\t {} frames'.format(id, frm_cnt))
             id_list.append(id)
             frm_cnt_list.append(frm_cnt)
     reord = np.argsort(frm_cnt_list)
@@ -107,13 +88,11 @@ def fix_detctions(input_fname, output_fname, show=True):
                     best_relative_cross = best_cross_distance / (np.sqrt(inter_id_distances[idx1, idx1] * inter_id_distances[idx2, idx2]) + 1e-16)
                     best_cross_1, best_cross_2 = id, cand_id
         if len(candidates) > 0:
-            print('ID {} can also be:'.format(id), candidates)
-    print('best match: {} - {} , distance: {:5.3f}, relative: {:5.3f}'.format(best_cross_1, best_cross_2, best_cross_distance, best_relative_cross))
+            if verbose:
+                print('ID {} can also be:'.format(id), candidates)
+    if verbose:
+        print('best match: {} - {} , distance: {:5.3f}, relative: {:5.3f}'.format(best_cross_1, best_cross_2, best_cross_distance, best_relative_cross))
 
-    # inter_id_distances = np.ones((len(id_list), len(id_list)))
-    # for idx1, id_1 in enumerate(id_list):
-    #     for idx2, id_2 in enumerate(id_list):
-    #         inter_id_distances[idx1, idx2] = check_similarity(id_1, id_2, id_vec, pairwise_dist, iou)
     if show:
         fig, ax = plt.subplots(1, 1)
         sns.heatmap(np.round(inter_id_distances, decimals=2), ax=ax, annot=True, xticklabels=id_list, yticklabels=id_list)
@@ -143,21 +122,22 @@ def fix_detctions(input_fname, output_fname, show=True):
         if len(person) > 0:
             new_person_detection.append(person)
 
-    with open(output_fname, 'wb') as fd:
-        pickle.dump(dict({'person_detection': new_person_detection}), fd)
+    if output_fname is not None:
+        with open(output_fname, 'wb') as fd:
+            pickle.dump(dict({'person_detection': new_person_detection}), fd)
 
     return new_person_detection
 
 
-
-
-if __name__ == '__main__':
+def reid_all_clips(show=True, verbose=True):
 
     first_id, last_id = np.zeros(5, dtype=int), np.zeros(5, dtype=int)
     for i in range(1, 5):
         input_fnane = os.path.join(DATA_FOLDER, str(i))
-        output_fname = input_fnane + '_'
-        person_detection = fix_detctions(input_fname=input_fnane, output_fname=output_fname, show=False)
+        if verbose:
+            print('fixing ', input_fnane)
+        output_fname = input_fnane + '_fixed'
+        person_detection = fix_detctions_inside_a_clip(input_fname=input_fnane, output_fname=None, show=False, verbose=False)
         if i == 1:
             all_person_detections = copy.copy(person_detection)
             first_id[i], last_id[i] = 1, len(all_person_detections) - 1
@@ -165,8 +145,9 @@ if __name__ == '__main__':
             first_id[i] = len(all_person_detections) + 1
             all_person_detections = all_person_detections + copy.copy(person_detection)
             last_id[i] = len(all_person_detections) - 1
-    for i in range(1, 5):
-        print('clip {} first id = {} last id = {}'.format(i, first_id[i], last_id[i]))
+    if verbose:
+        for i in range(1, 5):
+            print('clip {} first id = {} last id = {}'.format(i, first_id[i], last_id[i]))
 
     num_ids, num_frames, dtct_array, dtct_conf, mask_wgt_vec, id_vec, feat_vec, _, _ = parse_person_detection(all_person_detections)
     # #
@@ -178,9 +159,10 @@ if __name__ == '__main__':
     # pairwize distances
     A_sqr = (feat_vec ** 2).sum(axis=1)
     pairwise_dist = A_sqr[:, np.newaxis] - 2 * feat_vec @ feat_vec.T + A_sqr[np.newaxis, :]
-    fig, ax = plt.subplots(1, 1)
-    ax.imshow(pairwise_dist)
-    plt.show()
+    if show:
+        fig, ax = plt.subplots(1, 1)
+        fig.suptitle('pairwise distances')
+        ax.imshow(pairwise_dist)
 
     # pairwise weigths
     mask_wgt_vec = np.sqrt(mask_wgt_vec)
@@ -269,10 +251,13 @@ if __name__ == '__main__':
     #                 # wesser_distances[id1, id2] = (feat_mean[id1] - feat_mean[id2]) @ (feat_mean[id1] - feat_mean[id2]).T + \
     #                 #     np.trace(feat_cov[id1] + feat_cov[id2] - 2 * cross_cov_term)
 
-    fig, ax = plt.subplots(1, 1)
-    sns.heatmap(np.round(cross_dist_mat, decimals=2), ax=ax, annot=True)#, xticklabels=id_list, yticklabels=id_list))
-    fig, ax = plt.subplots(1, 1)
-    sns.heatmap(np.round(rel_dist_mat, decimals=2), ax=ax, annot=True)#, xticklabels=id_list, yticklabels=id_list))
+    if show:
+        fig, ax = plt.subplots(1, 1)
+        fig.suptitle('un-normalized average pairwise distances')
+        sns.heatmap(np.round(cross_dist_mat, decimals=2), ax=ax, annot=True)#, xticklabels=id_list, yticklabels=id_list))
+        fig, ax = plt.subplots(1, 1)
+        fig.suptitle('normalized average pairwise distances')
+        sns.heatmap(np.round(rel_dist_mat, decimals=2), ax=ax, annot=True)#, xticklabels=id_list, yticklabels=id_list))
     # fig, ax = plt.subplots(1, 1)
     # sns.heatmap(np.round(10 * bat_distances, decimals=2), ax=ax, annot=True)#, xticklabels=id_list, yticklabels=id_list))
     # fig, ax = plt.subplots(1, 1)
@@ -294,7 +279,8 @@ if __name__ == '__main__':
                             if key == id1:
                                 new_id = modifications[clip_1][key]
                     modifications[clip_2][id2] = new_id
-                    print('in clip {}  modify id={} to id-{}'.format(clip_2, id2, new_id))
+                    if verbose:
+                        print('in clip {}  modify id={} to id-{}'.format(clip_2, id2, new_id))
 
 
 
@@ -308,9 +294,16 @@ if __name__ == '__main__':
             for key in modifications[i_clip]:
                 person_detection[modifications[i_clip][key]] = person_detection[key]
                 person_detection[key] =[]
-        ouput_fname = os.path.join(DATA_FOLDER, str(i_clip)) + '_'
-        with open(ouput_fname, 'wb') as fd:
+        output_fname = os.path.join(DATA_FOLDER, str(i_clip) + '_final')
+        with open(output_fname, 'wb') as fd:
             pickle.dump(dict({'person_detection': person_detection}), fd)
+            print('written ', output_fname)
+
+
+
+if __name__ == '__main__':
+
+    reid_all_clips()
 
 
 
