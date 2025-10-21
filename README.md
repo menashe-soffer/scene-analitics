@@ -8,4 +8,4 @@ this will do:
 (4) generate the output video clips
 (50 generate a summary (print to screan)
 
-The results of the people detecton process are stored in the data folder; for each input clip 2 output clips are generated: *** one with the original object detector output, and one with the final (fixed) output. ***
+The results of the people detecton process are stored in the data folder; for each input clip 2 output clips are generated:  **one with the original object detector output, and one with the final (fixed) output**.
