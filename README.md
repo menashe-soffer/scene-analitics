@@ -1,3 +1,7 @@
+![this is a solution to the scene-analysis exercise.](showcase.jpg)
+```
+
+```
 this is a solution to the scene-analysis exercise.
 It analyses the 4 video clips in the video folder.
 
