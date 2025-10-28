@@ -21,6 +21,7 @@ README.md
 *.pdf
 *.mp4
 *.jpg
+*.html
 
 # You can also add specific file types or log files you want to ignore
 # For example:
