@@ -13,6 +13,8 @@ The whole pipeline can be done by runninh main.py, which does the follows:
 
 the output videos are in the data folder. **there are 2 output clips for each input clip: one with the original detcetions, and one with the final (fixed) detections**.
 
+![see inside](https://github.com/menashe-soffer/scene-analitics/blob/main/showcase.jpg)
+
 the text output is read as follows:
 
 ```
